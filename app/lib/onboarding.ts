@@ -15,6 +15,16 @@ export type Organization = {
   onboardingCompleted: boolean;
 };
 
+export type UserProfile = {
+  id: string;
+  email: string;
+  fullName: string;
+  phone: string | null;
+  avatarUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type OnboardingStatus = {
   organization: Organization | null;
   currentStep: "workspace" | "setup" | "property" | "team" | "complete";
@@ -62,7 +72,9 @@ export async function apiRequest<T>(
         signal: controller.signal,
         credentials: "same-origin",
         headers: {
-          ...(init.body ? { "Content-Type": "application/json" } : {}),
+          ...(init.body && !(init.body instanceof FormData)
+            ? { "Content-Type": "application/json" }
+            : {}),
           ...init.headers,
         },
       });
@@ -390,6 +402,20 @@ export function getCurrentOrganization() {
   return apiRequest<{ organization: Organization; role: string }>(
     "/organizations/current",
   );
+}
+
+export function getCurrentUser() {
+  return apiRequest<{ user: UserProfile }>("/users/me");
+}
+
+export function updateCurrentUser(values: {
+  fullName: string;
+  phone: string;
+}) {
+  return apiRequest<{ user: UserProfile }>("/users/me", {
+    method: "PATCH",
+    body: JSON.stringify(values),
+  });
 }
 
 export function getProperties() {
