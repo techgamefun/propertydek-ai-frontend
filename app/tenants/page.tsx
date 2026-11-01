@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import WorkspaceShell from "../components/WorkspaceShell";
@@ -98,11 +99,27 @@ export default function TenantsPage() {
                     href={`/tenants/${encodeURIComponent(tenant.id)}`}
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h2 className="font-semibold text-[#25342e]">{tenant.fullName}</h2>
-                        <p className="mt-1 text-sm text-[#738078]">
-                          {tenant.email ?? tenant.phone ?? "No contact details"}
-                        </p>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e7efe8] text-sm font-semibold text-[#52735c]">
+                          {tenant.avatarUrl ? (
+                            <Image
+                              alt={`${tenant.fullName} profile photo`}
+                              className="h-full w-full object-cover"
+                              height={48}
+                              src={tenant.avatarUrl}
+                              unoptimized
+                              width={48}
+                            />
+                          ) : (
+                            getInitials(tenant.fullName)
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="truncate font-semibold text-[#25342e]">{tenant.fullName}</h2>
+                          <p className="mt-1 text-sm text-[#738078]">
+                            {tenant.email ?? tenant.phone ?? "No contact details"}
+                          </p>
+                        </div>
                       </div>
                       <span className="rounded-full bg-[#f0f5ef] px-2.5 py-1 text-[11px] font-medium text-[#52735c]">
                         {tenant._count.leases} {tenant._count.leases === 1 ? "lease" : "leases"}
@@ -149,4 +166,14 @@ function Summary({ label, value }: { label: string; value: number }) {
       <p className="mt-2 text-2xl font-semibold text-[#25342e]">{value}</p>
     </div>
   );
+}
+
+function getInitials(fullName: string) {
+  return fullName
+    .trim()
+    .split(/\s+/u)
+    .slice(0, 2)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase();
 }

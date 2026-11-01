@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   ApiRequestError,
   getCurrentUser,
+  removeCurrentUserAvatar,
   updateCurrentUser,
   type UserProfile,
 } from "../lib/onboarding";
@@ -57,8 +59,25 @@ function ProfileForm({ user }: { user: UserProfile }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const inputClass =
     "mt-2 h-12 w-full rounded-xl border border-[#dce3de] bg-white px-4 text-[15px] outline-none focus:border-[#527e69] focus:ring-4 focus:ring-[#527e69]/10";
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
+  function changeAvatarFile(file: File | null) {
+    setAvatarFile(file);
+    setAvatarPreview(file ? URL.createObjectURL(file) : null);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,12 +85,14 @@ function ProfileForm({ user }: { user: UserProfile }) {
     setError("");
     setSaved(false);
     try {
-      const result = await updateCurrentUser(values);
+      const result = await updateCurrentUser(values, avatarFile);
       queryClient.setQueryData(["current-user"], result);
       setValues({
         fullName: result.user.fullName,
         phone: result.user.phone ?? "",
       });
+      setAvatarUrl(result.user.avatarUrl);
+      changeAvatarFile(null);
       setSaved(true);
     } catch (actionError) {
       setError(
@@ -81,6 +102,27 @@ function ProfileForm({ user }: { user: UserProfile }) {
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarBusy(true);
+    setError("");
+    setSaved(false);
+    try {
+      const result = await removeCurrentUserAvatar();
+      queryClient.setQueryData(["current-user"], result);
+      setAvatarUrl(result.user.avatarUrl);
+      changeAvatarFile(null);
+      setSaved(true);
+    } catch (actionError) {
+      setError(
+        actionError instanceof ApiRequestError
+          ? actionError.message
+          : "Profile photo could not be removed.",
+      );
+    } finally {
+      setAvatarBusy(false);
     }
   }
 
@@ -103,6 +145,69 @@ function ProfileForm({ user }: { user: UserProfile }) {
           {error && <Notice message={error} success={false} />}
           {saved && <Notice message="Profile details saved." success />}
           <form className="mt-7 space-y-5" onSubmit={submit}>
+            <section aria-label="Profile photo" className="flex flex-col gap-4 rounded-2xl border border-[#e1e7e1] bg-[#fbfcfa] p-4 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e7efe8] text-xl font-semibold text-[#52735c]">
+                {(avatarPreview ?? avatarUrl) ? (
+                  <Image
+                    alt={`${user.fullName}'s profile photo`}
+                    className="h-full w-full object-cover"
+                    height={80}
+                    src={avatarPreview ?? avatarUrl ?? ""}
+                    unoptimized
+                    width={80}
+                  />
+                ) : (
+                  getInitials(user.fullName)
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold text-[#25342e]">Profile photo</h2>
+                <p className="mt-1 text-xs text-[#738078]">JPG, PNG, or WebP. Maximum file size: 5 MB.</p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <label className="inline-flex h-10 cursor-pointer items-center rounded-xl border border-[#dce3de] bg-white px-4 text-sm font-semibold text-[#25342e] hover:bg-[#f7f8f6]">
+                    {avatarFile
+                      ? "Choose another photo"
+                      : avatarUrl
+                        ? "Edit photo"
+                        : "Choose photo"}
+                    <input
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      disabled={busy || avatarBusy}
+                      onChange={(event) => {
+                        changeAvatarFile(event.target.files?.[0] ?? null);
+                        event.currentTarget.value = "";
+                      }}
+                      type="file"
+                    />
+                  </label>
+                  {avatarFile && (
+                    <button
+                      className="text-sm font-medium text-[#68756f] hover:underline"
+                      disabled={busy || avatarBusy}
+                      onClick={() => changeAvatarFile(null)}
+                      type="button"
+                    >
+                      Cancel selection
+                    </button>
+                  )}
+                  {avatarUrl && (
+                    <button
+                      className="text-sm font-semibold text-[#a12a21] hover:underline disabled:opacity-60"
+                      disabled={busy || avatarBusy}
+                      onClick={() => {
+                        if (window.confirm("Remove your profile photo?")) {
+                          void removeAvatar();
+                        }
+                      }}
+                      type="button"
+                    >
+                      {avatarBusy ? "Removing..." : "Remove photo"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
             <label className="block text-sm font-medium text-[#25342e]">
               Full name
               <input
@@ -144,7 +249,7 @@ function ProfileForm({ user }: { user: UserProfile }) {
             </label>
             <button
               className="h-12 rounded-xl bg-[#1d5745] px-6 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={busy}
+              disabled={busy || avatarBusy}
               type="submit"
             >
               {busy ? "Saving..." : "Save changes"}
@@ -177,4 +282,14 @@ function Loading() {
       Loading profile...
     </main>
   );
+}
+
+function getInitials(fullName: string) {
+  return fullName
+    .trim()
+    .split(/\s+/u)
+    .slice(0, 2)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase();
 }

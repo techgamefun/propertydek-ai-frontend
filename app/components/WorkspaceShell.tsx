@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useState, type ReactNode } from "react";
 import { logoutUser, LoginError } from "../lib/auth";
+import { useTheme } from "../providers";
 
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
@@ -28,6 +29,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
 function WorkspaceLayoutContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -65,6 +67,14 @@ function WorkspaceLayoutContent({ children }: { children: ReactNode }) {
           PropertyDek
         </Link>
         <button
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border-strong text-brand-strong"
+          onClick={toggleTheme}
+          type="button"
+        >
+          <ThemeIcon theme={theme} />
+        </button>
+        <button
           aria-expanded={mobileMenuOpen}
           aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-border-strong text-brand-strong"
@@ -87,6 +97,15 @@ function WorkspaceLayoutContent({ children }: { children: ReactNode }) {
             </span>
             PropertyDek
           </Link>
+          <button
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            className="mt-6 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted transition hover:bg-background hover:text-ink"
+            onClick={toggleTheme}
+            type="button"
+          >
+            <ThemeIcon theme={theme} />
+            {theme === "dark" ? "Light mode" : "Dark mode"}
+          </button>
         </div>
 
         <div className="mb-3 mt-4 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted md:mt-10">
@@ -181,6 +200,19 @@ function MenuIcon({ open }: { open: boolean }) {
   ) : (
     <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
       <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function ThemeIcon({ theme }: { theme: "light" | "dark" }) {
+  return theme === "dark" ? (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" stroke="currentColor" strokeLinecap="round" strokeWidth="1.7" />
+    </svg>
+  ) : (
+    <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+      <path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.5 8.5 0 1 0 20.2 15.2Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
     </svg>
   );
 }

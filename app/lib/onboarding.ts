@@ -1,3 +1,5 @@
+import { notifyToast } from "./toast";
+
 export type SetupMethod = "fresh" | "import" | "demo";
 export type MembershipRole =
   | "ADMIN"
@@ -60,6 +62,8 @@ export async function apiRequest<T>(
   init: RequestInit = {},
   timeoutMs = 15_000,
 ): Promise<T> {
+  const method = (init.method ?? "GET").toUpperCase();
+  const isMutation = method !== "GET" && method !== "HEAD";
   let response: Response;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -111,16 +115,69 @@ export async function apiRequest<T>(
         response.status,
       );
     }
+    if (isMutation) {
+      notifyToast("success", getSuccessMessage(method, path));
+    }
     return result.data;
   } catch (error) {
     if (error instanceof ApiRequestError) {
+      if (isMutation) {
+        notifyToast("error", error.message);
+      }
       throw error;
     }
-    throw new ApiRequestError("The request could not be completed.");
+    const requestError = new ApiRequestError("The request could not be completed.");
+    if (isMutation) {
+      notifyToast("error", requestError.message);
+    }
+    throw requestError;
   } finally {
     clearTimeout(timeoutId);
     init.signal?.removeEventListener("abort", abortFromCaller);
   }
+}
+
+function getSuccessMessage(method: string, path: string) {
+  if (method === "DELETE") {
+    return "Deleted successfully.";
+  }
+  if (method === "PATCH" || method === "PUT") {
+    return "Changes saved successfully.";
+  }
+  if (path.includes("/payments")) {
+    return "Payment recorded successfully.";
+  }
+  if (path.includes("/assignments")) {
+    return "Assignment updated successfully.";
+  }
+  if (path.includes("/comments")) {
+    return "Comment added successfully.";
+  }
+  if (path.includes("/documents")) {
+    return "Document uploaded successfully.";
+  }
+  if (path.includes("/invitations")) {
+    return "Invitation sent successfully.";
+  }
+  if (path.includes("/demo-data")) {
+    return "Sample data created successfully.";
+  }
+  if (path.includes("/properties")) {
+    return "Property saved successfully.";
+  }
+  if (path.includes("/tenants")) {
+    return "Tenant saved successfully.";
+  }
+  if (path.includes("/leases")) {
+    return "Lease saved successfully.";
+  }
+  if (path.includes("/invoices")) {
+    return "Invoice saved successfully.";
+  }
+  if (path.includes("/maintenance")) {
+    return "Maintenance request saved successfully.";
+  }
+  return "Changes saved successfully.";
 }
 
 function refreshAccessToken() {
@@ -445,10 +502,26 @@ export function getCurrentUser() {
 export function updateCurrentUser(values: {
   fullName: string;
   phone: string;
-}) {
+}, avatarFile?: File | null) {
+  let body: BodyInit;
+  if (avatarFile) {
+    const formData = new FormData();
+    formData.set("fullName", values.fullName);
+    formData.set("phone", values.phone);
+    formData.set("avatar", avatarFile);
+    body = formData;
+  } else {
+    body = JSON.stringify(values);
+  }
   return apiRequest<{ user: UserProfile }>("/users/me", {
     method: "PATCH",
-    body: JSON.stringify(values),
+    body,
+  });
+}
+
+export function removeCurrentUserAvatar() {
+  return apiRequest<{ user: UserProfile }>("/users/me/avatar", {
+    method: "DELETE",
   });
 }
 

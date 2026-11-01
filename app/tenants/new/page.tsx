@@ -20,6 +20,7 @@ const EMPTY_VALUES: TenantValues = {
 export default function NewTenantPage() {
   const router = useRouter();
   const [values, setValues] = useState(EMPTY_VALUES);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,7 +29,7 @@ export default function NewTenantPage() {
     setBusy(true);
     setError("");
     try {
-      const result = await createTenant(values);
+      const result = await createTenant(values, avatarFile);
       router.push(`/tenants/${encodeURIComponent(result.tenant.id)}`);
     } catch (actionError) {
       setError(
@@ -58,7 +59,9 @@ export default function NewTenantPage() {
             </p>
             {error && <ErrorBanner message={error} />}
             <TenantForm
+              avatarFile={avatarFile}
               busy={busy}
+              onAvatarChange={setAvatarFile}
               onChange={(field, value) => setValues({ ...values, [field]: value })}
               onSubmit={submit}
               submitLabel="Create tenant"

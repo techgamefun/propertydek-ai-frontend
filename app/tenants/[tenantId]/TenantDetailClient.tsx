@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Children, useState, type ReactNode } from "react";
@@ -45,11 +46,15 @@ export default function TenantDetailClient() {
   }
 
   const tenant = tenantQuery.data.tenant;
-  async function submit(values: TenantValues) {
+  async function submit(
+    values: TenantValues,
+    avatarFile: File | null,
+    removeAvatar: boolean,
+  ) {
     setBusy(true);
     setError("");
     try {
-      await updateTenant(tenantId, values);
+      await updateTenant(tenantId, values, avatarFile, removeAvatar);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] }),
         queryClient.invalidateQueries({ queryKey: ["tenants"] }),
@@ -99,13 +104,31 @@ export default function TenantDetailClient() {
             ← Tenants
           </Link>
           <header className="mt-6 border-b border-[#e2e8e2] pb-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.17em] text-[#65806e]">
-              Tenant profile
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">{tenant.fullName}</h1>
-            <p className="mt-2 text-sm text-[#738078]">
-              {tenant.email ?? "No email"}{tenant.phone ? ` · ${tenant.phone}` : ""}
-            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#e7efe8] text-lg font-semibold text-[#52735c]">
+                {tenant.avatarUrl ? (
+                  <Image
+                    alt={`${tenant.fullName} profile photo`}
+                    className="h-full w-full object-cover"
+                    height={64}
+                    src={tenant.avatarUrl}
+                    unoptimized
+                    width={64}
+                  />
+                ) : (
+                  getInitials(tenant.fullName)
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.17em] text-[#65806e]">
+                  Tenant profile
+                </p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">{tenant.fullName}</h1>
+                <p className="mt-2 text-sm text-[#738078]">
+                  {tenant.email ?? "No email"}{tenant.phone ? ` · ${tenant.phone}` : ""}
+                </p>
+              </div>
+            </div>
           </header>
 
           <section className="mt-6 rounded-2xl border border-[#e2e8e2] bg-white p-6">
@@ -219,6 +242,7 @@ function TenantEditForm({
 }: {
   tenant: {
     fullName: string;
+    avatarUrl: string | null;
     email: string | null;
     phone: string | null;
     emergencyContact: string | null;
@@ -226,17 +250,35 @@ function TenantEditForm({
     notes: string | null;
   };
   busy: boolean;
-  onSubmit: (values: TenantValues) => void;
+  onSubmit: (
+    values: TenantValues,
+    avatarFile: File | null,
+    removeAvatar: boolean,
+  ) => void;
 }) {
   const [values, setValues] = useState(() => valuesForTenant(tenant));
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
   return (
     <TenantFormFields
+      avatarFile={avatarFile}
+      avatarUrl={tenant.avatarUrl}
       busy={busy}
+      onAvatarChange={(file) => {
+        setAvatarFile(file);
+        setRemoveAvatar(false);
+      }}
       onChange={(field, value) => setValues((current) => ({ ...current, [field]: value }))}
+      onCancelRemove={() => setRemoveAvatar(false)}
+      onRemoveAvatar={() => {
+        setAvatarFile(null);
+        setRemoveAvatar(true);
+      }}
       onSubmit={(event) => {
         event.preventDefault();
-        onSubmit(values);
+        onSubmit(values, avatarFile, removeAvatar);
       }}
+      removeAvatar={removeAvatar}
       submitLabel="Save changes"
       values={values}
     />
@@ -247,4 +289,14 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(
     new Date(value),
   );
+}
+
+function getInitials(fullName: string) {
+  return fullName
+    .trim()
+    .split(/\s+/u)
+    .slice(0, 2)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase();
 }

@@ -119,6 +119,7 @@ export default function DashboardPage() {
               detail="Across your portfolio"
               icon="building"
               tone="green"
+              href="/properties"
             />
             <MetricCard
               label="Total units"
@@ -126,6 +127,7 @@ export default function DashboardPage() {
               detail={`${metrics.occupiedUnits} currently occupied`}
               icon="units"
               tone="blue"
+              href="/properties"
             />
             <MetricCard
               label="Occupancy rate"
@@ -137,6 +139,7 @@ export default function DashboardPage() {
               }
               icon="occupancy"
               tone="amber"
+              href="/properties"
             />
             <MetricCard
               label="Rent collected"
@@ -146,6 +149,7 @@ export default function DashboardPage() {
               detail="Successful payments to date"
               icon="payments"
               tone="violet"
+              href="/invoices"
             />
           </section>
 
@@ -325,8 +329,8 @@ export default function DashboardPage() {
                 </div>
               )}
               <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-5">
-                <MiniMetric label="Active leases" value={metrics.activeLeases} />
-                <MiniMetric label="Open maintenance" value={metrics.openMaintenance} />
+                <MiniMetric href="/leases" label="Active leases" value={metrics.activeLeases} />
+                <MiniMetric href="/maintenance" label="Open maintenance" value={metrics.openMaintenance} />
               </div>
             </article>
           </section>
@@ -374,12 +378,14 @@ function MetricCard({
   detail,
   icon,
   tone,
+  href,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: "building" | "units" | "occupancy" | "payments";
   tone: "green" | "blue" | "amber" | "violet";
+  href: string;
 }) {
   const toneStyles = {
     green: "bg-brand-soft text-brand",
@@ -389,7 +395,10 @@ function MetricCard({
   }[tone];
 
   return (
-    <article className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+    <Link
+      className="block rounded-2xl border border-border bg-surface p-5 shadow-card transition hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      href={href}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-muted">{label}</p>
@@ -402,7 +411,7 @@ function MetricCard({
         </span>
       </div>
       <p className="mt-3 text-xs text-muted">{detail}</p>
-    </article>
+    </Link>
   );
 }
 
@@ -588,12 +597,15 @@ function LegendItem({
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: number }) {
+function MiniMetric({ href, label, value }: { href: string; label: string; value: number }) {
   return (
-    <div>
+    <Link
+      className="block rounded-lg p-2 transition hover:bg-background focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+      href={href}
+    >
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-1 text-lg font-semibold text-ink">{value}</p>
-    </div>
+    </Link>
   );
 }
 

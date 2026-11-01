@@ -1,3 +1,5 @@
+import { notifyToast } from "./toast";
+
 export type RegistrationField = "fullName" | "email" | "password" | "phone" | "avatar";
 
 export type RegistrationValues = {
@@ -77,11 +79,16 @@ export async function registerUser(values: RegistrationValues) {
   );
 
   if (!result.success || !result.data?.user) {
+    notifyToast(
+      "error",
+      "The authentication service returned an unreadable response. Please try again.",
+    );
     throw new RegistrationError(
       "The authentication service returned an unreadable response. Please try again.",
     );
   }
 
+  notifyToast("success", "Your account was created successfully.");
   return result.data.user;
 }
 
@@ -93,11 +100,16 @@ export async function loginUser(values: LoginValues) {
   );
 
   if (!result.success || !result.data?.user) {
+    notifyToast(
+      "error",
+      "The authentication service returned an unreadable response. Please try again.",
+    );
     throw new LoginError(
       "The authentication service returned an unreadable response. Please try again.",
     );
   }
 
+  notifyToast("success", "Signed in successfully.");
   return result.data.user;
 }
 
@@ -109,14 +121,18 @@ export async function logoutUser() {
       credentials: "same-origin",
     });
   } catch {
-    throw new LoginError(
-      "We couldn't connect to the authentication service. Please try again in a moment.",
-    );
+    const message =
+      "We couldn't connect to the authentication service. Please try again in a moment.";
+    notifyToast("error", message);
+    throw new LoginError(message);
   }
 
   if (!response.ok) {
-    throw new LoginError("We couldn't sign you out. Please try again.");
+    const message = "We couldn't sign you out. Please try again.";
+    notifyToast("error", message);
+    throw new LoginError(message);
   }
+  notifyToast("success", "Signed out successfully.");
 }
 
 async function postAuthRequest(
@@ -136,26 +152,27 @@ async function postAuthRequest(
       credentials: "same-origin",
     });
   } catch {
-    throw createError(
-      "We couldn't connect to the authentication service. Please try again in a moment.",
-    );
+    const message =
+      "We couldn't connect to the authentication service. Please try again in a moment.";
+    notifyToast("error", message);
+    throw createError(message);
   }
 
   let result: AuthResponse;
   try {
     result = (await response.json()) as AuthResponse;
   } catch {
-    throw createError(
-      "The authentication service returned an unreadable response. Please try again.",
-    );
+    const message =
+      "The authentication service returned an unreadable response. Please try again.";
+    notifyToast("error", message);
+    throw createError(message);
   }
 
   if (!response.ok) {
-    throw createError(
-      result.error?.message ??
-        "The authentication request failed. Please try again.",
-      result.error?.fields,
-    );
+    const message =
+      result.error?.message ?? "The authentication request failed. Please try again.";
+    notifyToast("error", message);
+    throw createError(message, result.error?.fields);
   }
 
   return result;

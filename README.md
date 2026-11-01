@@ -9,6 +9,12 @@ the backend at `http://localhost:5000` by default. TanStack React Query manages
 both authentication mutations and their pending, success, and error states.
 Successful logins store a session in an HttpOnly cookie set by the backend.
 
+## Account settings
+
+The My profile page lets signed-in users edit their name and phone number,
+upload a JPG, PNG, or WebP profile photo (up to 5 MB), and remove the current
+photo. Email changes are not available from account settings.
+
 ## Lease management
 
 The authenticated workspace includes a Leases section to create and track
@@ -39,6 +45,9 @@ The Tenants section provides a workspace-scoped directory with search, tenant
 profiles, contact and emergency-contact details, notes, lease history, and
 maintenance history. Owners, admins, and property managers can create and edit
 tenant profiles. Tenants with lease history cannot be deleted.
+Tenant records can include a JPG, PNG, or WebP profile photo (up to 5 MB), which
+is visible in the tenant directory and profile and can be replaced or removed
+while editing the tenant.
 
 ## Invoices
 

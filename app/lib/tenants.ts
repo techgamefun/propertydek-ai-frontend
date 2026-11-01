@@ -3,6 +3,7 @@ import { apiRequest } from "./onboarding";
 export type Tenant = {
   id: string;
   fullName: string;
+  avatarUrl: string | null;
   email: string | null;
   phone: string | null;
   emergencyContact: string | null;
@@ -64,21 +65,42 @@ export function getTenant(tenantId: string) {
   );
 }
 
-export function createTenant(values: TenantValues) {
+export function createTenant(values: TenantValues, avatarFile?: File | null) {
+  const body = createTenantBody(values, avatarFile);
   return apiRequest<{ tenant: Tenant }>("/tenants", {
     method: "POST",
-    body: JSON.stringify(values),
+    body,
   });
 }
 
-export function updateTenant(tenantId: string, values: TenantValues) {
+export function updateTenant(
+  tenantId: string,
+  values: TenantValues,
+  avatarFile?: File | null,
+  removeAvatar = false,
+) {
+  const body = avatarFile
+    ? createTenantBody(values, avatarFile)
+    : JSON.stringify({ ...values, ...(removeAvatar ? { removeAvatar: true } : {}) });
   return apiRequest<{ tenant: Tenant }>(
     `/tenants/${encodeURIComponent(tenantId)}`,
     {
       method: "PATCH",
-      body: JSON.stringify(values),
+      body,
     },
   );
+}
+
+function createTenantBody(values: TenantValues, avatarFile?: File | null): BodyInit {
+  if (!avatarFile) {
+    return JSON.stringify(values);
+  }
+  const body = new FormData();
+  for (const [field, value] of Object.entries(values)) {
+    body.set(field, value);
+  }
+  body.set("avatar", avatarFile);
+  return body;
 }
 
 export function deleteTenant(tenantId: string) {
