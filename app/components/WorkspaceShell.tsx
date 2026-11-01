@@ -8,7 +8,9 @@ import { logoutUser, LoginError } from "../lib/auth";
 const menuItems = [
   { href: "/dashboard", label: "Dashboard", icon: "grid" },
   { href: "/properties", label: "Properties", icon: "building" },
+  { href: "/tenants", label: "Tenants", icon: "people" },
   { href: "/leases", label: "Leases", icon: "lease" },
+  { href: "/maintenance", label: "Maintenance", icon: "maintenance" },
   { href: "/invoices", label: "Invoices", icon: "invoice" },
   { href: "/team", label: "Team", icon: "people" },
   { href: "/profile", label: "My profile", icon: "user" },
@@ -194,6 +196,7 @@ function NavIcon({ name }: { name: (typeof menuItems)[number]["icon"] }) {
     grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
     building: "M4 20V7l8-4 8 4v13M3 20h18M8 9h.01M12 9h.01M16 9h.01M8 13h.01M12 13h.01M16 13h.01M10 20v-4h4v4",
     lease: "M7 3.75h7l4 4v12.5H7a2 2 0 0 1-2-2v-12.5a2 2 0 0 1 2-2ZM14 3.75v4h4M8.5 12h7M8.5 15.5h7",
+    maintenance: "M14.7 6.3a4 4 0 0 0-5.3 5.3L4 17v3h3l5.4-5.4a4 4 0 0 0 5.3-5.3l-2.3 2.3-2.6-2.6 2.3-2.7Z",
     invoice: "M5 4h14v16l-3.5-2-3.5 2-3.5-2L5 20V4ZM8 8h8M8 11.5h8M8 15h4",
     people: "M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM16 4.3a3.5 3.5 0 0 1 0 6.8M20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35",
     user: "M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z",

@@ -58,10 +58,11 @@ let refreshRequest: Promise<boolean> | null = null;
 export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
+  timeoutMs = 15_000,
 ): Promise<T> {
   let response: Response;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   const abortFromCaller = () => controller.abort();
   init.signal?.addEventListener("abort", abortFromCaller, { once: true });
 
@@ -193,6 +194,16 @@ export type Property = {
   description?: string | null;
   _count?: { units: number };
   units?: Unit[];
+  documents?: PropertyDocument[];
+};
+
+export type PropertyDocument = {
+  id: string;
+  name: string;
+  mimeType: string | null;
+  sizeBytes: string | null;
+  createdAt: string;
+  uploadedBy: { id: string; fullName: string } | null;
 };
 
 export type Unit = {
@@ -241,6 +252,29 @@ export function updateProperty(
 export function getPropertyById(propertyId: string) {
   return apiRequest<{ property: Property }>(
     `/properties/${encodeURIComponent(propertyId)}`,
+  );
+}
+
+export function uploadPropertyDocument(propertyId: string, file: File) {
+  const body = new FormData();
+  body.set("document", file);
+  return apiRequest<{ document: PropertyDocument }>(
+    `/properties/${encodeURIComponent(propertyId)}/documents`,
+    { method: "POST", body },
+    60_000,
+  );
+}
+
+export function getPropertyDocumentDownloadUrl(propertyId: string, documentId: string) {
+  return apiRequest<{ downloadUrl: string }>(
+    `/properties/${encodeURIComponent(propertyId)}/documents/${encodeURIComponent(documentId)}/download`,
+  );
+}
+
+export function deletePropertyDocument(propertyId: string, documentId: string) {
+  return apiRequest<{ deleted: boolean }>(
+    `/properties/${encodeURIComponent(propertyId)}/documents/${encodeURIComponent(documentId)}`,
+    { method: "DELETE" },
   );
 }
 

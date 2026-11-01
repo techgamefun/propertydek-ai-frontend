@@ -8,11 +8,15 @@ import {
   ApiRequestError,
   createUnit,
   createUnitsBulk,
+  deletePropertyDocument,
+  getPropertyDocumentDownloadUrl,
   getPropertyById,
   getPropertyUnits,
+  uploadPropertyDocument,
   updateProperty,
   type Property,
 } from "../../lib/onboarding";
+import GoogleDriveImportButton from "./GoogleDriveImportButton";
 
 export default function PropertyDetailPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -32,6 +36,9 @@ export default function PropertyDetailPage() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [documentBusy, setDocumentBusy] = useState(false);
+  const [documentError, setDocumentError] = useState("");
+  const [documentNotice, setDocumentNotice] = useState("");
   const propertyQuery = useQuery({
     queryKey: ["property", propertyId],
     queryFn: () => getPropertyById(propertyId),
@@ -49,6 +56,59 @@ export default function PropertyDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["property", propertyId] }),
       queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
     ]);
+  }
+
+  async function uploadDocument(file: File) {
+    setDocumentBusy(true);
+    setDocumentError("");
+    setDocumentNotice("");
+    try {
+      await uploadPropertyDocument(propertyId, file);
+      await queryClient.invalidateQueries({ queryKey: ["property", propertyId] });
+      setDocumentNotice("Document uploaded.");
+    } catch (actionError) {
+      setDocumentError(
+        actionError instanceof ApiRequestError
+          ? actionError.message
+          : "The document could not be uploaded.",
+      );
+    } finally {
+      setDocumentBusy(false);
+    }
+  }
+
+  async function downloadDocument(documentId: string) {
+    setDocumentError("");
+    try {
+      const { downloadUrl } = await getPropertyDocumentDownloadUrl(propertyId, documentId);
+      window.location.assign(downloadUrl);
+    } catch (actionError) {
+      setDocumentError(
+        actionError instanceof ApiRequestError
+          ? actionError.message
+          : "The document could not be downloaded.",
+      );
+    }
+  }
+
+  async function removeDocument(documentId: string) {
+    if (!window.confirm("Delete this property document? This cannot be undone.")) return;
+    setDocumentBusy(true);
+    setDocumentError("");
+    setDocumentNotice("");
+    try {
+      await deletePropertyDocument(propertyId, documentId);
+      await queryClient.invalidateQueries({ queryKey: ["property", propertyId] });
+      setDocumentNotice("Document deleted.");
+    } catch (actionError) {
+      setDocumentError(
+        actionError instanceof ApiRequestError
+          ? actionError.message
+          : "The document could not be deleted.",
+      );
+    } finally {
+      setDocumentBusy(false);
+    }
   }
 
   async function submitUnit(event: FormEvent<HTMLFormElement>) {
@@ -169,6 +229,91 @@ export default function PropertyDetailPage() {
             ]);
           }}
         />
+
+        <section className="mt-8 rounded-2xl border border-[#e2e8e2] bg-white p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Property documents</h2>
+              <p className="mt-1 text-sm text-[#738078]">
+                Store permits, inspection reports, and other property files.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <label
+                className={`inline-flex h-11 cursor-pointer items-center justify-center rounded-xl bg-[#1d5745] px-5 text-sm font-semibold text-white ${
+                  documentBusy ? "opacity-60" : ""
+                }`}
+              >
+                {documentBusy ? "Please wait..." : "Upload a document"}
+                <input
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  className="sr-only"
+                  disabled={documentBusy}
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    if (file) void uploadDocument(file);
+                  }}
+                  type="file"
+                />
+              </label>
+              <GoogleDriveImportButton
+                propertyId={propertyId}
+                onImported={() => {
+                  void queryClient.invalidateQueries({
+                    queryKey: ["property", propertyId],
+                  });
+                }}
+              />
+            </div>
+          </div>
+          {documentError && (
+            <p className="mt-4 rounded-xl border border-[#f1c7c4] bg-[#fff5f4] px-4 py-3 text-sm text-[#a12a21]" role="alert">
+              {documentError}
+            </p>
+          )}
+          {documentNotice && (
+            <p className="mt-4 text-sm text-[#28583b]" role="status">
+              {documentNotice}
+            </p>
+          )}
+          {propertyDetails.documents?.length ? (
+            <ul className="mt-5 divide-y divide-[#edf0ec]">
+              {propertyDetails.documents.map((document) => (
+                <li className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between" key={document.id}>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-[#25342e]">{document.name}</p>
+                    <p className="mt-1 text-xs text-[#738078]">
+                      {document.uploadedBy?.fullName ?? "Workspace user"} · {formatDate(document.createdAt)}
+                      {document.sizeBytes ? ` · ${formatBytes(Number(document.sizeBytes))}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-4">
+                    <button
+                      className="text-sm font-semibold text-[#1d5745] disabled:opacity-50"
+                      onClick={() => void downloadDocument(document.id)}
+                      type="button"
+                    >
+                      Download
+                    </button>
+                    <button
+                      className="text-sm font-semibold text-[#a12a21] disabled:opacity-50"
+                      disabled={documentBusy}
+                      onClick={() => void removeDocument(document.id)}
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-5 rounded-xl bg-[#f7f8f6] p-4 text-sm text-[#68756f]">
+              No documents attached to this property.
+            </p>
+          )}
+        </section>
 
         {error && (
           <p className="mt-6 rounded-xl border border-[#f1c7c4] bg-[#fff5f4] px-4 py-3 text-sm text-[#a12a21]" role="alert">
@@ -433,6 +578,16 @@ function formatRooms(bedrooms: number | string | null, bathrooms: number | strin
   const beds = bedrooms === null ? "Studio" : `${bedrooms} bed`;
   const baths = bathrooms === null ? "bath count not set" : `${bathrooms} bath`;
   return `${beds}, ${baths}`;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function Loading() {
